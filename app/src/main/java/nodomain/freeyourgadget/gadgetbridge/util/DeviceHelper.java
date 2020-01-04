@@ -70,6 +70,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.miscale2.MiScale2DeviceCoord
 import nodomain.freeyourgadget.gadgetbridge.devices.no1f1.No1F1Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.pebble.PebbleCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.qhybrid.QHybridCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.riotwatch.RiotWatchCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.roidmi.Roidmi1Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.roidmi.Roidmi3Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.vibratissimo.VibratissimoCoordinator;
@@ -235,6 +236,7 @@ public class DeviceHelper {
         result.add(new Watch9DeviceCoordinator());
         result.add(new Roidmi1Coordinator());
         result.add(new Roidmi3Coordinator());
+        result.add(new RiotWatchCoordinator());
         result.add(new CasioGB6900DeviceCoordinator());
         result.add(new BFH16DeviceCoordinator());
         result.add(new MijiaLywsd02Coordinator());
