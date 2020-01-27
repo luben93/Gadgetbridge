@@ -49,6 +49,15 @@ import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService;
 public class RiotWatchCoordinator extends AbstractDeviceCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(RiotWatchCoordinator.class);
 
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    @NonNull
+    @Override
+    public Collection<? extends ScanFilter> createBLEScanFilters() {
+        return Collections.singletonList(new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString("9851dc0a-b04a-1399-5646-3b38788cb1c5")).build());
+    }
+
+
     @Override
     protected void deleteDevice(@NonNull GBDevice gbDevice, @NonNull Device device, @NonNull DaoSession session) throws GBException {
 
@@ -58,10 +67,10 @@ public class RiotWatchCoordinator extends AbstractDeviceCoordinator {
     @Override
     public DeviceType getSupportedType(GBDeviceCandidate candidate) {
         try {
-            BluetoothDevice device = candidate.getDevice();
-            String name = device.getName();
-            if (name != null && name.startsWith("RIOT")) {
-                return DeviceType.RIOTWATCH;
+            for(ParcelUuid uuid : candidate.getServiceUuids()){
+                if(uuid.getUuid().toString().equals("9851dc0a-b04a-1399-5646-3b38788cb1c5")){
+                    return DeviceType.RIOTWATCH;
+                }
             }
         } catch (Exception ex) {
             LOG.error("unable to check device support", ex);
