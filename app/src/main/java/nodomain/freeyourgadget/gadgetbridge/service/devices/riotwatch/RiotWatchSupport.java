@@ -113,8 +113,8 @@ public class RiotWatchSupport extends AbstractBTLEDeviceSupport {
         batteryCharacteristic = getCharacteristic(GattCharacteristic.UUID_CHARACTERISTIC_BATTERY_LEVEL);
         heartrateCharacteristic = getCharacteristic(GattCharacteristic.UUID_CHARACTERISTIC_HEART_RATE_MEASUREMENT);
 
-        builder.setGattCallback(this);
         builder.notify(heartrateCharacteristic, true);
+        builder.notify(batteryCharacteristic, true);
 
         gbDevice.setState(GBDevice.State.INITIALIZED);
         gbDevice.sendDeviceUpdateIntent(getContext());
