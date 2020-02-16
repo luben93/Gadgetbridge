@@ -24,6 +24,7 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.widget.Toast;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,11 +52,15 @@ import nodomain.freeyourgadget.gadgetbridge.model.MusicStateSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLEDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.BtLEAction;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.GattCharacteristic;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.Transaction;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.actions.ReadAction;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.actions.SetDeviceStateAction;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.ServerTransactionBuilder;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 public class RiotWatchSupport extends AbstractBTLEDeviceSupport {
     private static final Logger LOG = LoggerFactory.getLogger(RiotWatchSupport.class);
@@ -64,8 +69,28 @@ public class RiotWatchSupport extends AbstractBTLEDeviceSupport {
     public BluetoothGattCharacteristic heartrateCharacteristic = null;
     public BluetoothGattCharacteristic batteryCharacteristic = null;
 
+    public static final UUID RIOTWATCH_UUID = UUID.fromString("9851dc0a-b04a-1399-5646-3b38788cb1c5");
+
     private final GBDeviceEventVersionInfo versionCmd = new GBDeviceEventVersionInfo();
     private final GBDeviceEventBatteryInfo batteryCmd = new GBDeviceEventBatteryInfo();
+
+//discovered supported service: Generic Access: 00001800-0000-1000-8000-00805f9b34fb
+//characteristic: Device Name: 00002a00-0000-1000-8000-00805f9b34fb
+//characteristic: Appearance: 00002a01-0000-1000-8000-00805f9b34fb
+
+//discovered supported service: Generic Attribute: 00001801-0000-1000-8000-00805f9b34fb
+//characteristic: Service Changed: 00002a05-0000-1000-8000-00805f9b34fb
+
+//discovered unsupported service: Unknown Service: 9851dc0a-b04a-1399-5646-3b38788cb1c5
+
+//discovered supported service: Heart Rate: 0000180d-0000-1000-8000-00805f9b34fb
+//characteristic: Heart Rate Measurement: 00002a37-0000-1000-8000-00805f9b34fb
+//characteristic: Body Sensor Location: 00002a38-0000-1000-8000-00805f9b34fb
+//discovered unsupported service: Device Information: 0000180a-0000-1000-8000-00805f9b34fb
+
+//discovered supported service: Battery Service: 0000180f-0000-1000-8000-00805f9b34fb
+//characteristic: Battery Level: 00002a19-0000-1000-8000-00805f9b34fb
+
 
     public RiotWatchSupport() {
         super(LOG);
@@ -73,6 +98,9 @@ public class RiotWatchSupport extends AbstractBTLEDeviceSupport {
         addSupportedService(GattService.UUID_SERVICE_GENERIC_ATTRIBUTE);
         addSupportedService(GattService.UUID_SERVICE_BATTERY_SERVICE);
         addSupportedService(GattService.UUID_SERVICE_CURRENT_TIME);
+        addSupportedService(GattService.UUID_SERVICE_HEART_RATE);
+        addSupportedService(GattService.UUID_SERVICE_DEVICE_INFORMATION);
+        addSupportedService(RIOTWATCH_UUID);
 
         BluetoothGattService RiotWatchGATTCTSService = new BluetoothGattService(GattService.UUID_SERVICE_CURRENT_TIME,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY);
@@ -124,6 +152,7 @@ public class RiotWatchSupport extends AbstractBTLEDeviceSupport {
         return builder;
     }
 
+    @Override
     public boolean onCharacteristicChanged(BluetoothGatt gatt,
                                            BluetoothGattCharacteristic characteristic) {
         if (super.onCharacteristicChanged(gatt, characteristic)) {
@@ -138,19 +167,18 @@ public class RiotWatchSupport extends AbstractBTLEDeviceSupport {
 
         if (GattCharacteristic.UUID_CHARACTERISTIC_HEART_RATE_MEASUREMENT.equals(characteristicUUID)) {
             //TODO handle heart data
-            LOG.info("Current heart rate: "     + data[0]);
+            LOG.info("Current heart rate: " + data[0]);
             return true;
-        }
-        else if (GattCharacteristic.UUID_CHARACTERISTIC_BATTERY_LEVEL.equals(characteristicUUID)) {
+        } else if (GattCharacteristic.UUID_CHARACTERISTIC_BATTERY_LEVEL.equals(characteristicUUID)) {
             handleBatteryInfo(characteristic.getValue(), BluetoothGatt.GATT_SUCCESS);
             return true;
-        }
-        else {
+        } else {
             LOG.warn("Unknown UUID notification update received: " + characteristicUUID);
             return true;
         }
     }
 
+    @Override
     public boolean onCharacteristicRead(BluetoothGatt gatt,
                                         BluetoothGattCharacteristic characteristic, int status) {
         super.onCharacteristicRead(gatt, characteristic, status);
@@ -160,8 +188,7 @@ public class RiotWatchSupport extends AbstractBTLEDeviceSupport {
         if (GattCharacteristic.UUID_CHARACTERISTIC_BATTERY_LEVEL.equals(characteristicUUID)) {
             handleBatteryInfo(characteristic.getValue(), status);
             return true;
-        }
-        else {
+        } else {
             LOG.warn("Unknown gatt read request" + characteristicUUID);
         }
         return true;
@@ -259,7 +286,15 @@ public class RiotWatchSupport extends AbstractBTLEDeviceSupport {
 
     @Override
     public void onHeartRateTest() {
-
+        try {
+            TransactionBuilder t = performInitialized("heartRateTest");
+            BluetoothGattCharacteristic hrm = new BluetoothGattCharacteristic(GattCharacteristic.UUID_CHARACTERISTIC_HEART_RATE_MEASUREMENT, 0, 0);
+            t.add(new ReadAction(hrm));
+            t.queue(getQueue());
+        }catch (Exception e){
+            LOG.warn("Error starting heart rate measurement: "+e.getMessage());
+            GB.toast(getContext(), "Error starting heart rate measurement: " + e.getLocalizedMessage(), Toast.LENGTH_LONG, GB.ERROR);
+        }
     }
 
     @Override
@@ -356,16 +391,17 @@ public class RiotWatchSupport extends AbstractBTLEDeviceSupport {
 
     @Override
     public boolean onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset, BluetoothGattCharacteristic characteristic) {
-
-        if (characteristic.getUuid().equals(GattCharacteristic.UUID_CHARACTERISTIC_CURRENT_TIME)) {
+        UUID characteristicUUID = characteristic.getUuid();
+        if (characteristicUUID.equals(GattCharacteristic.UUID_CHARACTERISTIC_CURRENT_TIME)) {
             LOG.info("will send response to read request for time from device: " + device.getAddress());
             handleTimeRequest(device, requestId, offset);
             return true;
-        }
-        else if (characteristic.getUuid().equals(GattCharacteristic.UUID_CHARACTERISTIC_LOCAL_TIME_INFORMATION)) {
+        } else if (characteristicUUID.equals(GattCharacteristic.UUID_CHARACTERISTIC_LOCAL_TIME_INFORMATION)) {
             LOG.info("will send response to read request for local time info from device: " + device.getAddress());
             return true;
         }
+        LOG.warn(device.getName() + "sent unrecognized read request" + characteristic.getUuid());
         return false;
+
     }
 }
