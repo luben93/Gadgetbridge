@@ -18,15 +18,9 @@ before_install:
 script:
   - "./gradlew build connectedCheck --stacktrace"
   - bash config/travis/validate_fastlane_metadata.sh
-  - ls
-  - ls app
-  - ls app/build
-  - ls app/build/outputs
-  - ls app/build/outputs/apk
-  - ls app/build/outputs/apk/debug
-  - ls /home/travis/build/luben93/Gadgetbridge/app/build/outputs/apk/debug
 deploy:
   provider: releases
+  skip_cleanup: true
   api_key:
     secure: L2/pzZxxk17QEFSkhpl2JJaAkOxj/qxg9wiM9/auC88wwp24Hg04/J0krnsMZpea7mqO108DODE8KwWLOHcPKWE/gdk/lvX7ucOqA4QDupzYFC8c+nxfojk8YFES0FyOkqf8vIocJj55GF18Bc12JkUzWgpVjd1g3Sgpn+pkbLxpdDZJybQArNJzc412EjRteM++b9+m1MPro/sGomV/lEtAZrVlHQ8HKL934XZ0+7B6HQyrCT5Hm92Ka8qdCKKN1xipph+dIqFtUVr/lnDPKb9seH12zqQKitz+Ofi6ieErQCS/tl88r6S6UrDfrD+DqAykp3+DEqZsKTRJuIDSoPYSxJv9OBv6FlcAiOa489X0LdLJ53RT4yRN7iWwZg8nv5hZS6vKxiBbMqWRAYxsyetHjOzERiwU1cPuwpmh8/ouDUbsMDHU8v0xnDZcqbaJuiLZyzsLeIbHCujHDcsZxN2m+fx0ZFK15o3nHnFyUCF81VnobOqgncdQgZDvJVT5tAABYOryp7CM9CcelFxZG5pjz9kDl6tCJAWpbsZ581rPTFTX4GqI1G5ts58Sxs7WZDbbXJGCIvkcybUXs5eA3TarELtwvTQBOnD6F18NdIEy9MvaEPtVCgcOhofNDwxs1wnbAHZepBbr7RjzzrlbRvK4ou1hvi74KzR4k/A9BnQ=
   file: app/build/outputs/apk/debug/app-debug.apk # does not work :(
